@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    
+    <context:property-placeholder location="classpath:mule.properties"/>
+    
+    <spring:beans>
+		<spring:bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+			destroy-method="close">
+			<spring:property name="url" value="${jdbc.url}" />
+			<spring:property name="username" value="${jdbc.username}" />
+			<spring:property name="password" value="${jdbc.password}" />
+			<spring:property name="driverClassName" value="${jdbc.driver}" />
+			<spring:property name="initialSize" value="5" />
+			<spring:property name="testOnBorrow" value="true" />
+			<spring:property name="validationQuery" value="${jdbc.validationQuery}" />
+			<spring:property name="maxWait" value="60000" />
+			<spring:property name="maxActive" value="50" />
+			<spring:property name="removeAbandoned" value="true" />
+			<spring:property name="removeAbandonedTimeout" value="300" />
+			<spring:property name="logAbandoned" value="true" />
+		</spring:bean>
+	</spring:beans>
+	
+	<db:generic-config name="Generic_Database_Configuration"
+		dataSource-ref="dataSource" doc:name="Generic Database Configuration"
+		doc:description="This is the database connector. It uses the data source spring bean defined above for its connection to the db." />
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    
+    <flow name="databaseFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/db" doc:name="HTTP"/>
+        <db:select config-ref="Generic_Database_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[SELECT a.id, first_name, b.address  FROM accounts a JOIN addresses b on a.id = b.account_id]]></db:parameterized-query>
+        </db:select>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+</mule>
